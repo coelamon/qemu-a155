@@ -70,6 +70,16 @@ static void mt6253_soc_initfn(Object *obj)
 	
     object_initialize(&s->emi, sizeof(s->emi), TYPE_MT6253_EMI);
     qdev_set_parent_bus(DEVICE(&s->emi), sysbus_get_default());
+	
+	DPRINTF("init lcd\n");
+	
+    object_initialize(&s->lcd, sizeof(s->lcd), TYPE_MT6253_LCD);
+    qdev_set_parent_bus(DEVICE(&s->lcd), sysbus_get_default());
+	
+	DPRINTF("init gpio\n");
+	
+    object_initialize(&s->gpio, sizeof(s->gpio), TYPE_MT6253_GPIO);
+    qdev_set_parent_bus(DEVICE(&s->gpio), sysbus_get_default());
 
 	DPRINTF("init uarts\n");
 	
@@ -83,8 +93,8 @@ static void mt6253_soc_initfn(Object *obj)
 static void mt6253_soc_realize(DeviceState *dev_soc, Error **errp)
 {
 	MT6253State *s = MT6253_SOC(dev_soc);
-    DeviceState *cfgdev, *uartdev, *emidev;
-    SysBusDevice *cfgbusdev, *uartbusdev, *emibusdev;
+    DeviceState *cfgdev, *uartdev, *emidev, *lcddev, *gpiodev;
+    SysBusDevice *cfgbusdev, *uartbusdev, *emibusdev, *lcdbusdev, *gpiobusdev;
 	ARMCPU *cpu;
 	// qemu_irq *pic;
     Error *err = NULL;
@@ -124,7 +134,7 @@ static void mt6253_soc_realize(DeviceState *dev_soc, Error **errp)
         return;
     }
     cfgbusdev = SYS_BUS_DEVICE(cfgdev);
-    sysbus_mmio_map(cfgbusdev, 0, 0x80010000);
+    sysbus_mmio_map(cfgbusdev, 0, CFG_BASE_ADDRESS);
 	
 	DPRINTF("emi\n");
 	emidev = DEVICE(&s->emi);
@@ -135,7 +145,27 @@ static void mt6253_soc_realize(DeviceState *dev_soc, Error **errp)
         return;
     }
     emibusdev = SYS_BUS_DEVICE(emidev);
-    sysbus_mmio_map(emibusdev, 0, 0x81000000);
+    sysbus_mmio_map(emibusdev, 0, EMI_BASE_ADDRESS);
+	
+	DPRINTF("lcd regs\n");
+	lcddev = DEVICE(&s->lcd);
+    object_property_set_bool(OBJECT(&s->lcd), true, "realized", &err);
+    if (err != NULL) {
+        error_propagate(errp, err);
+        return;
+    }
+    lcdbusdev = SYS_BUS_DEVICE(lcddev);
+    sysbus_mmio_map(lcdbusdev, 0, LCD_BASE_ADDRESS);
+	
+	DPRINTF("gpio regs\n");
+	gpiodev = DEVICE(&s->gpio);
+    object_property_set_bool(OBJECT(&s->gpio), true, "realized", &err);
+    if (err != NULL) {
+        error_propagate(errp, err);
+        return;
+    }
+    gpiobusdev = SYS_BUS_DEVICE(gpiodev);
+    sysbus_mmio_map(gpiobusdev, 0, GPIO_BASE_ADDRESS);
 	
 	// Attach UART
 	DPRINTF("attach uart\n");

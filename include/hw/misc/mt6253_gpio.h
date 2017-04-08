@@ -1,5 +1,5 @@
 /*
- * MT6253 SoC
+ * MT6253 CFG
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,45 +20,23 @@
  * THE SOFTWARE.
  */
 
-#ifndef HW_ARM_MT6253_H
-#define HW_ARM_MT6253_H
+#ifndef HW_MT6253_GPIO_H
+#define HW_MT6253_GPIO_H
 
-#include "hw/misc/mt6253_cfg.h"
-#include "hw/misc/mt6253_emi.h"
-#include "hw/misc/mt6253_lcd.h"
-#include "hw/misc/mt6253_gpio.h"
-#include "hw/char/mt6253_uart.h"
+#include "hw/sysbus.h"
+#include "hw/hw.h"
 
-#define TYPE_MT6253_SOC "mt6253-soc"
-#define MT6253_SOC(obj) \
-    OBJECT_CHECK(MT6253State, (obj), TYPE_MT6253_SOC)
+#define TYPE_MT6253_GPIO "mt6253-gpio"
+#define MT6253_GPIO(obj) \
+    OBJECT_CHECK(MT6253GpioState, (obj), TYPE_MT6253_GPIO)
 
-#define MT_NUM_UARTS 3
-
-#define SYSTEMRAM_BASE_ADDRESS 0x40000000
-#define SYSTEMRAM_SIZE (144 * 1024)
-
-#define SYSTEMROM_BASE_ADDRESS 0x48000000
-#define SYSTEMROM_SIZE (20 * 1024)
-
-#define CFG_BASE_ADDRESS  0x80010000
-#define GPIO_BASE_ADDRESS 0x80020000
-#define EMI_BASE_ADDRESS  0x81000000
-#define LCD_BASE_ADDRESS  0x90000000
-
-typedef struct MT6253State {
-    /*< private >*/
+typedef struct {
+    /* <private> */
     SysBusDevice parent_obj;
-    /*< public >*/
 
-    char *kernel_filename;
-    char *cpu_model;
+    /* <public> */
+    MemoryRegion mmio;
 
-    MT6253CfgState cfg;
-	MT6253EmiState emi;
-	MT6253LcdState lcd;
-	MT6253GpioState gpio;
-    MT6253UartState uart[MT_NUM_UARTS];
-} MT6253State;
+} MT6253GpioState;
 
-#endif
+#endif /* HW_MT6253_GPIO_H */
