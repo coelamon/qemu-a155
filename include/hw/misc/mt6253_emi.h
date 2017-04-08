@@ -62,10 +62,6 @@ typedef struct {
 	
 	MemoryRegion boot_code;
 	
-	int boot_code_is_mapped;
-	int bank0_is_mapped;
-	int bank1_is_mapped;
-	
     /* <public> */
     MemoryRegion mmio;
 	

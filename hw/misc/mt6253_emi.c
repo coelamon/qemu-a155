@@ -50,30 +50,25 @@ static void mt6253_emi_remap_ctl_changed(MT6253EmiState *obj)
 	
 	MemoryRegion *system_memory = get_system_memory();
 	
-	if (s->boot_code_is_mapped)
+	if (memory_region_is_mapped(&s->boot_code))
 	{
 		memory_region_del_subregion(system_memory, &s->boot_code);
-		s->boot_code_is_mapped = 0;
 	}
 	
-	if (s->bank0_is_mapped)
+	if (memory_region_is_mapped(&s->bank0))
 	{
 		memory_region_del_subregion(system_memory, &s->bank0);
-		s->bank0_is_mapped = 0;
 	}
 	
-	if (s->bank1_is_mapped)
+	if (memory_region_is_mapped(&s->bank1))
 	{
 		memory_region_del_subregion(system_memory, &s->bank1);
-		s->bank1_is_mapped = 0;
 	}
 	
 	if (s->remap_ctl == EMI_REMAP_0_BC_BANK1)
 	{
 		memory_region_add_subregion(system_memory, EMI_ADDRESS_0, &s->boot_code);
 		memory_region_add_subregion(system_memory, EMI_ADDRESS_1, &s->bank1);
-		s->boot_code_is_mapped = 1;
-		s->bank1_is_mapped = 1;
 		DPRINTF("EMI: Boot Code => 0x00000000\n");
 		DPRINTF("EMI: BANK1     => 0x08000000\n");
 	}
@@ -82,8 +77,6 @@ static void mt6253_emi_remap_ctl_changed(MT6253EmiState *obj)
 	{
 		memory_region_add_subregion(system_memory, EMI_ADDRESS_0, &s->bank1);
 		memory_region_add_subregion(system_memory, EMI_ADDRESS_1, &s->bank0);
-		s->bank0_is_mapped = 1;
-		s->bank1_is_mapped = 1;
 		DPRINTF("EMI: BANK1 => 0x00000000\n");
 		DPRINTF("EMI: BANK0 => 0x08000000\n");
 	}
@@ -92,8 +85,6 @@ static void mt6253_emi_remap_ctl_changed(MT6253EmiState *obj)
 	{
 		memory_region_add_subregion(system_memory, EMI_ADDRESS_0, &s->bank0);
 		memory_region_add_subregion(system_memory, EMI_ADDRESS_1, &s->bank1);
-		s->bank0_is_mapped = 1;
-		s->bank1_is_mapped = 1;
 		DPRINTF("EMI: BANK0 => 0x00000000\n");
 		DPRINTF("EMI: BANK1 => 0x08000000\n");
 	}
@@ -110,9 +101,15 @@ static void mt6253_emi_reset(DeviceState *dev)
 static uint64_t mt6253_emi_read(void *opaque, hwaddr addr,
                                      unsigned int size)
 {
-    //MT6253EmiState *s = opaque;
+    MT6253EmiState *s = opaque;
+	
+	switch (addr) {
+		case EMI_REMAP:
+			DPRINTF("read: EMI_REMAP\n");
+			return s->remap_ctl;
+	}
 
-    int reg_info_found = 0;
+    /*int reg_info_found = 0;
 	Mt6253RegInfo *info = mt6253_emi_regs;
 	while (info->name != 0) {
 		if (info->addr == addr) {
@@ -123,8 +120,8 @@ static uint64_t mt6253_emi_read(void *opaque, hwaddr addr,
 		info++;
 	}
 	if (!reg_info_found) {
-		//DPRINTF("read: 0x%"HWADDR_PRIx"\n", addr);
-	}
+		DPRINTF("read: 0x%"HWADDR_PRIx"\n", addr);
+	}*/
 
     return 0;
 }
@@ -168,10 +165,6 @@ static void mt6253_emi_init(Object *obj)
     MT6253EmiState *s = MT6253_EMI(obj);
 	
 	Error *err = NULL;
-	
-	s->boot_code_is_mapped = 0;
-	s->bank0_is_mapped = 0;
-	s->bank1_is_mapped = 0;
 	
 	memory_region_init_ram(&s->boot_code, NULL, "MT6253.EMI.BOOTCODE", BOOT_CODE_SIZE,
 	                       &err);
