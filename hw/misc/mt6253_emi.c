@@ -14,9 +14,11 @@ do { fprintf(stderr, "%s: " fmt, __func__, ## __VA_ARGS__); } while (0)
 do {} while (0)
 #endif
 
+// 1024 - to avoid outside RAM or ROM exception
+#define BOOT_CODE_SIZE 1024
+
 static char boot_code_bin[] =
 {
-	0, 0, 0, 0,
 	0x04, 0xF0, 0x1F, 0xE5, // ldr pc, 4
 	0x00, 0x00, 0x00, 0x48  // 0x48000000
 };
@@ -121,7 +123,7 @@ static uint64_t mt6253_emi_read(void *opaque, hwaddr addr,
 		info++;
 	}
 	if (!reg_info_found) {
-		DPRINTF("read: 0x%"HWADDR_PRIx"\n", addr);
+		//DPRINTF("read: 0x%"HWADDR_PRIx"\n", addr);
 	}
 
     return 0;
@@ -171,17 +173,15 @@ static void mt6253_emi_init(Object *obj)
 	s->bank0_is_mapped = 0;
 	s->bank1_is_mapped = 0;
 	
-	memory_region_init_ram_ptr(&s->boot_code, NULL, "MT6253.EMI.BOOTCODE", sizeof(boot_code_bin),
-                           boot_code_bin);
-	vmstate_register_ram_global(&s->boot_code);
+	memory_region_init_ram(&s->boot_code, NULL, "MT6253.EMI.BOOTCODE", BOOT_CODE_SIZE,
+	                       &err);
+	memcpy(memory_region_get_ram_ptr(&s->boot_code), boot_code_bin, sizeof(boot_code_bin));
 	
 	memory_region_init_ram(&s->bank0, NULL, "MT6253.EMI.BANK0", BANK0_SIZE,
                            &err);
-	vmstate_register_ram_global(&s->bank0);
 	
 	memory_region_init_ram(&s->bank1, NULL, "MT6253.EMI.BANK1", BANK1_SIZE,
                            &err);
-	vmstate_register_ram_global(&s->bank1);
 	
 	s->remap_ctl = EMI_REMAP_0_BC_BANK1;
 	mt6253_emi_remap_ctl_changed(s);

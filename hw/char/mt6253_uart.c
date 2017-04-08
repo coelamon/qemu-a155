@@ -51,7 +51,7 @@ static uint64_t mt6253_uart_read(void *opaque, hwaddr addr,
 		case UART_LSR:
 			return UART_LSR_THRE;
 		default:
-			DPRINTF("Read 0x%"HWADDR_PRIx"\n", addr);
+			//DPRINTF("Read 0x%"HWADDR_PRIx"\n", addr);
 			break;
 	}
 	
