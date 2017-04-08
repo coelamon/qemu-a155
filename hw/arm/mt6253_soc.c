@@ -39,6 +39,11 @@ do { fprintf(stderr, "%s: " fmt, __func__, ## __VA_ARGS__); } while (0)
 do {} while (0)
 #endif
 
+static char system_rom_prog[] = {
+	0x04, 0xF0, 0x1F, 0xE5, // ldr pc, 4
+	0x00, 0x00, 0x00, 0x00  // 0x00000000
+};
+
 static const uint32_t uart_addr[MT_NUM_UARTS] = { 0x81030000, 0x81040000, 0x81050000 };
 
 static void mt6253_soc_initfn(Object *obj)
@@ -71,25 +76,14 @@ static void mt6253_soc_realize(DeviceState *dev_soc, Error **errp)
     DeviceState *cfgdev, *uartdev, *emidev;
     SysBusDevice *cfgbusdev, *uartbusdev, *emibusdev;
 	ARMCPU *cpu;
-	int image_size;
 	// qemu_irq *pic;
     Error *err = NULL;
     int i;
 	
 	MemoryRegion *system_memory = get_system_memory();
     MemoryRegion *systemram = g_new(MemoryRegion, 1);
-	MemoryRegion *psram = g_new(MemoryRegion, 1);
-    MemoryRegion *flash = g_new(MemoryRegion, 1);
+	MemoryRegion *systemrom = g_new(MemoryRegion, 1);
 	
-	DPRINTF("flash\n");
-	
-	memory_region_init_ram(flash, NULL, "MT6253.flash", FLASH_SIZE,
-                           &err);
-
-	vmstate_register_ram_global(flash);
-	
-	memory_region_add_subregion(system_memory, FLASH_BASE_ADDRESS, flash);
-
 	DPRINTF("system ram\n");
 	
     memory_region_init_ram(systemram, NULL, "MT6253.systemram", SYSTEMRAM_SIZE,
@@ -97,12 +91,12 @@ static void mt6253_soc_realize(DeviceState *dev_soc, Error **errp)
     vmstate_register_ram_global(systemram);
     memory_region_add_subregion(system_memory, SYSTEMRAM_BASE_ADDRESS, systemram);
 	
-	DPRINTF("pseudo sram\n");
+	DPRINTF("system rom\n");
 	
-    memory_region_init_ram(psram, NULL, "MT6253.psram", PSRAM_SIZE,
-                           &err);
-    vmstate_register_ram_global(psram);
-    memory_region_add_subregion(system_memory, PSRAM_BASE_ADDRESS, psram);
+	memory_region_init_ram_ptr(systemrom, NULL, "MT6253.systemrom", SYSTEMROM_SIZE,
+                           system_rom_prog);
+    vmstate_register_ram_global(systemrom);
+    memory_region_add_subregion(system_memory, SYSTEMROM_BASE_ADDRESS, systemrom);
 	
 	DPRINTF("cpu\n");
 	
@@ -112,14 +106,6 @@ static void mt6253_soc_realize(DeviceState *dev_soc, Error **errp)
         exit(1);
     }
 	
-	DPRINTF("load image\n");
-	
-	image_size = load_image_targphys(s->kernel_filename, FLASH_BASE_ADDRESS, FLASH_SIZE);
-	if (image_size < 0) {
-        error_report("Could not load ROM image '%s'", s->kernel_filename);
-        exit(1);
-    }
-    
 	DPRINTF("cfg regs\n");
 	cfgdev = DEVICE(&s->cfg);
     object_property_set_bool(OBJECT(&s->cfg), true, "realized", &err);
@@ -130,8 +116,9 @@ static void mt6253_soc_realize(DeviceState *dev_soc, Error **errp)
     cfgbusdev = SYS_BUS_DEVICE(cfgdev);
     sysbus_mmio_map(cfgbusdev, 0, 0x80010000);
 	
-	DPRINTF("emi regs\n");
+	DPRINTF("emi\n");
 	emidev = DEVICE(&s->emi);
+	qdev_prop_set_string(emidev, "kernel-filename", s->kernel_filename);
     object_property_set_bool(OBJECT(&s->emi), true, "realized", &err);
     if (err != NULL) {
         error_propagate(errp, err);
